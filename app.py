@@ -3,64 +3,63 @@ import moviepy.editor as mp
 import speech_recognition as sr
 import os
 
-# Website Ki Design
-st.set_page_config(page_title="Free AI Shorts Clipper", page_icon="??", layout="centered")
-st.title("?? Free AI Shorts Clipper & Transcriber")
-st.write("Apni lambi video upload karo, uske chote clips cut karo aur transcription nikalo bilkul free!")
+# Page Configuration
+st.set_page_config(page_title="Free AI Shorts Clipper", page_icon="🎬", layout="centered")
+st.title("🎬 Free AI Shorts Clipper & Transcriber")
+st.write("Apni video upload karo, shorts cut karo aur text nikalo free me!")
 
-# Video Upload Option
-uploaded_file = st.file_bar = st.file_uploader("Video File Upload Karein (.mp4)", type=["mp4"])
+uploaded_file = st.file_uploader("Video File Upload Karein (.mp4)", type=["mp4"])
 
 if uploaded_file is not None:
-    # Save uploaded file temporarily
+    # Save video locally
     with open("temp_video.mp4", "wb") as f:
         f.write(uploaded_file.read())
     
     st.success("Video successfully upload ho gayi!")
     
-    # Video details
+    # Load video using MoviePy
     video_clip = mp.VideoFileClip("temp_video.mp4")
     duration = video_clip.duration
     st.info(f"Video ki total length: {int(duration)} seconds")
 
-    # 1. Automatic Clipper Section
-    st.subheader("?? 1. Video Clip Cutter (Shorts)")
-    start_time = st.number_input("Clip Kahan se shuru karni hai (Seconds me):", min_value=0, max_value=int(duration), value=0)
-    end_time = st.number_input("Clip Kahan khatam karni hai (Seconds me):", min_value=0, max_value=int(duration), value=min(30, int(duration)))
+    # 1. Clipper Section
+    st.subheader("✂️ 1. Video Clip Cutter (Shorts)")
+    start_time = st.number_input("Clip Kahan se shuru karni hai (Seconds):", min_value=0, max_value=int(duration), value=0)
+    end_time = st.number_input("Clip Kahan khatam karni hai (Seconds):", min_value=0, max_value=int(duration), value=min(30, int(duration)))
 
     if st.button("Short Clip Cut Karein"):
         with st.spinner("AI aapki video cut kar raha hai..."):
-            # Subclip cutting
-            output_clip = video_clip.subclip(start_time, end_time)
-            # Standard Short Ratio (9:16) me convert karne ka basic logic
-            output_clip = output_clip.resize(height=720) 
-            output_clip.write_videofile("short_output.mp4", codec="libx264", audio_codec="aac")
-            
-            st.video("short_output.mp4")
-            st.success("Aapki short video taiyar hai!")
-            
-            # Download Button
-            with open("short_output.mp4", "rb") as file:
-                st.download_button(label="?? Download Short Video", data=file, file_name="my_short_clip.mp4", mime="video/mp4")
+            try:
+                output_clip = video_clip.subclip(start_time, end_time)
+                output_clip = output_clip.resize(height=720) 
+                output_clip.write_videofile("short_output.mp4", codec="libx264", audio_codec="aac")
+                
+                st.video("short_output.mp4")
+                st.success("Aapki short video taiyar hai!")
+                
+                with open("short_output.mp4", "rb") as file:
+                    st.download_button(label="🎬 Download Short Video", data=file, file_name="my_short_clip.mp4", mime="video/mp4")
+            except Exception as e:
+                st.error(f"Error cutting video: {e}")
 
-    # 2. Free Transcription Section
-    st.subheader("?? 2. Video Se Text (Transcription) Nikalein")
+    # 2. Transcription Section
+    st.subheader("📝 2. Video Se Text (Transcription) Nikalein")
     if st.button("Audio Se Text Nikalein"):
         with st.spinner("Audio extract aur translate ho raha hai..."):
             try:
-                # Audio extract karna
-                video_clip.audio.write_audiofile("temp_audio.wav", codec='pcm_s16le')
-                
-                # Speech recognition use karna (Google Free API)
-                recognizer = sr.Recognizer()
-                with sr.AudioFile("temp_audio.wav") as source:
-                    audio_data = recognizer.record(source)
-                    text = recognizer.recognize_google(audio_data, language="hi-IN") # Hindi/Hinglish support
-                
-                st.write("### Extracted Text:")
-                st.write(text)
+                if video_clip.audio is not None:
+                    video_clip.audio.write_audiofile("temp_audio.wav", codec='pcm_s16le')
+                    
+                    recognizer = sr.Recognizer()
+                    with sr.AudioFile("temp_audio.wav") as source:
+                        audio_data = recognizer.record(source)
+                        text = recognizer.recognize_google(audio_data, language="hi-IN")
+                    
+                    st.write("### Extracted Text:")
+                    st.write(text)
+                else:
+                    st.error("Is video me koi audio nahi hai!")
             except Exception as e:
                 st.error("Audio saaf nahi hai ya lamba hai. Choti video try karein.")
 
-    # Cleanup temp files
     video_clip.close()
